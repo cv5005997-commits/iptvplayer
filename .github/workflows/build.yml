@@ -45,7 +45,20 @@ jobs:
           gradle-version: '8.9'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "/usr/local/lib/android/sdk/platform-tools" >> "$GITHUB_PATH"
+          SDKMANAGER="/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find /usr/local/lib/android/sdk/cmdline-tools -type f -name sdkmanager -print -quit)"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          SDK_LEVEL="$(grep -RhoE 'compileSdk(Version)?[[:space:]]*[=: (]+[0-9]+' "$PROJECT_DIR" --include='*.gradle' --include='*.gradle.kts' | grep -oE '[0-9]+' | tail -1 || true)"
+          if [ -z "$SDK_LEVEL" ]; then SDK_LEVEL=35; fi
+          echo "Instalando Android SDK platform $SDK_LEVEL"
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-$SDK_LEVEL"
 
       - name: Build debug APK
         working-directory: ${{ env.PROJECT_DIR }}
