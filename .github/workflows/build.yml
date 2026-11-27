@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -23,7 +23,7 @@ jobs:
           set -euo pipefail
           mkdir source
           unzip -q IptvPlayer.zip -d source
-          SETTINGS="$(find source -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit)"
+          SETTINGS="$(find source -type f \\( -name settings.gradle -o -name settings.gradle.kts \\) -print -quit)"
           if [ -z "$SETTINGS" ]; then
             echo "::error::No se encontró settings.gradle ni settings.gradle.kts dentro del ZIP."
             find source -maxdepth 4 -type f | head -100
@@ -84,3 +84,15 @@ jobs:
           name: IPTVPlayer-debug-apk
           path: IPTVPlayer-debug.apk
           if-no-files-found: error
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v1.0.${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" IPTVPlayer-debug.apk \\
+            --repo "$GITHUB_REPOSITORY" \\
+            --title "IPTVPlayer $TAG" \\
+            --notes "APK generado y verificado automáticamente desde IptvPlayer.zip."
